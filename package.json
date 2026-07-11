@@ -1,0 +1,18 @@
+{
+  "name": "my-favorite-movies-checker",
+  "version": "1.0.0",
+  "description": "Theo doi tap moi cua cac phim hoat hinh 3D yeu thich va bao qua Telegram",
+  "main": "src/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "once": "node src/index.js --once",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
+  }
+}
