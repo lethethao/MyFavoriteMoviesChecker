@@ -893,5 +893,6 @@ No further commit needed — the deployed state is exactly what was pushed; the 
 
 ## After This Plan
 
+- **Post-deploy relocation:** after Task 13 completed, the deploy directory was moved from `~/apps/my-favorite-movies-checker` to `~/my-favorite-movies-checker` (sibling of the server's other apps, e.g. `chatwiththaofb-server`/`chatwiththaofb-frontend`, instead of nested under `apps/`). The now-empty `~/apps/` was removed. The crontab entry, the local `prod` git remote, and `crontab.txt`/the design spec were all updated to the new path — all steps above that reference `~/apps/my-favorite-movies-checker` reflect the path used at the time they ran, not the current location.
 - The old Claude cloud routine (`trig_01GcRZory2ZWAykweUup2m7E`) can be disabled once the server-hosted checker has run successfully for a full day, to avoid duplicate Telegram notifications. Disabling it is a manual follow-up via `RemoteTrigger` (`action: update`, `enabled: false`) or https://claude.ai/code/routines — not part of this plan.
 - Future code changes: edit locally, run `npm test`, commit, `GIT_SSH_COMMAND='ssh -i "ssh/instance-20260710-170332"' git push prod <your-branch>:master`, then re-run Task 13 Step 3 (skip Steps 1, 4, 6 — dependencies may need reinstalling but `.env` and the crontab entry stay as-is) to redeploy.

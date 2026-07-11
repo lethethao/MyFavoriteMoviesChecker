@@ -1,6 +1,9 @@
 # Dòng crontab cho my-favorite-movies-checker (chạy mỗi 30 phút, server đã ở UTC).
 # Thay <NODE_BIN> bằng đường dẫn tuyệt đối tới node do nvm cài (vd: /home/lethethao95/.nvm/versions/node/v22.x.x/bin/node),
 # lấy bằng lệnh `which node` sau khi `nvm use --lts` trên server.
-# Thay <APP_DIR> bằng thư mục deploy thực tế, mặc định: /home/lethethao95/apps/my-favorite-movies-checker
+# Thay <APP_DIR> bằng thư mục deploy thực tế, mặc định: /home/lethethao95/my-favorite-movies-checker
 
 */30 * * * * cd <APP_DIR> && <NODE_BIN> src/index.js >> logs/cron.log 2>&1
+
+# Đường dẫn thực tế đã dùng khi deploy (server 35.211.51.185):
+# */30 * * * * cd /home/lethethao95/my-favorite-movies-checker && /home/lethethao95/.nvm/versions/node/v24.18.0/bin/node src/index.js >> logs/cron.log 2>&1

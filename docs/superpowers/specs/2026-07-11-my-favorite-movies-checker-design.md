@@ -16,7 +16,7 @@ Chuyển logic của Claude cloud routine "Kiểm tra tập mới phim yêu thí
 - Host: `35.211.51.185`, user: `lethethao95`, SSH key: `ssh/instance-20260710-170332` (đã test kết nối thành công).
 - OS: Debian GNU/Linux 13 (trixie), timezone `Etc/UTC`.
 - Chưa có Node.js — cần cài qua `nvm` (không cần sudo). Không cần pm2 — lịch chạy do `crontab` của hệ thống đảm nhiệm, mỗi lần chạy là một tiến trình Node ngắn (chạy xong tự thoát).
-- Thư mục deploy trên server: `~/apps/my-favorite-movies-checker`.
+- Thư mục deploy trên server: `~/my-favorite-movies-checker`.
 
 ## Danh sách phim theo dõi (9 phim)
 
@@ -90,8 +90,8 @@ Mỗi module có một trách nhiệm rõ ràng, không phụ thuộc chéo ngo�
 ## Deploy flow (git)
 
 1. Local: `git init` (đã làm), commit theo từng giai đoạn nhỏ khi code xong từng phần (scaffold → movies.js → state.js → telegram.js → checker.js → index.js → docs).
-2. Server: tạo repo tại `~/apps/my-favorite-movies-checker` bằng `git init` + `git config receive.denyCurrentBranch updateInstead`, để `git push` cập nhật thẳng working directory, không cần pull tay.
-3. Local: thêm remote `prod` trỏ tới `ssh://lethethao95@35.211.51.185/home/lethethao95/apps/my-favorite-movies-checker`, rồi push nhánh code thực tế (vd `feature/nodejs-movie-checker`) lên `master` của server bằng refspec: `GIT_SSH_COMMAND='ssh -i "ssh/instance-20260710-170332"' git push prod <nhánh-local>:master` (cần `GIT_SSH_COMMAND` vì `git push` qua `ssh://` không tự nhận key file như lệnh `ssh -i` thông thường).
+2. Server: tạo repo tại `~/my-favorite-movies-checker` bằng `git init` + `git config receive.denyCurrentBranch updateInstead`, để `git push` cập nhật thẳng working directory, không cần pull tay.
+3. Local: thêm remote `prod` trỏ tới `ssh://lethethao95@35.211.51.185/home/lethethao95/my-favorite-movies-checker`, rồi push nhánh code thực tế (vd `feature/nodejs-movie-checker`) lên `master` của server bằng refspec: `GIT_SSH_COMMAND='ssh -i "ssh/instance-20260710-170332"' git push prod <nhánh-local>:master` (cần `GIT_SSH_COMMAND` vì `git push` qua `ssh://` không tự nhận key file như lệnh `ssh -i` thông thường).
 4. Server (qua SSH, chạy tay lần đầu): cài `nvm` + Node LTS, `npm install --production`, tạo `.env` thật, chạy thử `node src/index.js` một lần để xác nhận, rồi thêm dòng vào crontab (`crontab -e` hoặc `(crontab -l; echo "...") | crontab -`) trỏ tới đường dẫn Node tuyệt đối.
 5. Các lần cập nhật sau: push lại như bước 3 rồi SSH vào chạy `npm install --production` — không cần đụng vào crontab trừ khi lịch chạy thay đổi.
 
