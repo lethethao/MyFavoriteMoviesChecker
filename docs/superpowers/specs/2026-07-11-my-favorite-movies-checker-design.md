@@ -8,14 +8,14 @@ Chuyển logic của Claude cloud routine "Kiểm tra tập mới phim yêu thí
 
 ## Scope
 
-- Trong phạm vi: viết app Node.js, đóng gói gọn, deploy qua git lên server GCP (35.211.51.185), chạy nền bằng pm2, lập lịch 30 phút/lần.
+- Trong phạm vi: viết app Node.js, đóng gói gọn, deploy qua git lên server GCP (35.211.51.185), chạy định kỳ bằng **crontab** của Linux, lập lịch 30 phút/lần.
 - Ngoài phạm vi: không giữ lại phần "cloud routine" gốc trên claude.ai (không xoá, nhưng không còn là nguồn chạy chính); không xây dashboard/UI theo dõi.
 
 ## Target server
 
 - Host: `35.211.51.185`, user: `lethethao95`, SSH key: `ssh/instance-20260710-170332` (đã test kết nối thành công).
 - OS: Debian GNU/Linux 13 (trixie), timezone `Etc/UTC`.
-- Chưa có Node.js/pm2 — cần cài qua `nvm` (không cần sudo).
+- Chưa có Node.js — cần cài qua `nvm` (không cần sudo). Không cần pm2 — lịch chạy do `crontab` của hệ thống đảm nhiệm, mỗi lần chạy là một tiến trình Node ngắn (chạy xong tự thoát).
 - Thư mục deploy trên server: `~/apps/my-favorite-movies-checker`.
 
 ## Danh sách phim theo dõi (9 phim)
@@ -39,10 +39,9 @@ my-favorite-movies-checker/
 ├── .git/
 ├── .gitignore            # node_modules, .env, state.json, ssh/
 ├── package.json          # name: my-favorite-movies-checker
-├── ecosystem.config.js   # pm2 app config
 ├── .env.example
 ├── src/
-│   ├── index.js          # entrypoint: dotenv, cron schedule, --once mode
+│   ├── index.js          # entrypoint: dotenv, chạy 1 lượt kiểm tra rồi thoát
 │   ├── movies.js         # danh sách 9 phim + loại parser (hhkungfu | hoathinh3d)
 │   ├── checker.js        # fetch + parse + so sánh + tổng hợp kết quả
 │   ├── telegram.js       # gửi tin nhắn qua Telegram Bot API
@@ -55,7 +54,7 @@ Mỗi module có một trách nhiệm rõ ràng, không phụ thuộc chéo ngo�
 - `checker.js`: nhận danh sách phim + state cũ, trả về `{results, hasNewEpisode, newState}`. Không tự đọc/ghi file, không tự gửi Telegram — nhận state qua tham số, trả state mới ra ngoài để `index.js` quyết định ghi file & gửi tin.
 - `state.js`: chỉ đọc/ghi JSON, không biết gì về Telegram hay HTTP.
 - `telegram.js`: chỉ gửi text tới 1 chat_id, không biết gì về logic phim.
-- `index.js`: điều phối — đọc state, gọi checker, ghi state, gửi Telegram nếu cần, lặp lại theo lịch cron.
+- `index.js`: điều phối — đọc state, gọi checker, ghi state, gửi Telegram nếu cần, rồi thoát. Không tự lặp lại — lịch lặp do `crontab` của server đảm nhiệm (mỗi lần cron kích hoạt là một tiến trình Node độc lập, chạy xong thì thoát).
 
 ## Parsing logic (đã verify bằng curl thực tế trên cả 9 trang)
 
@@ -82,26 +81,30 @@ Mỗi module có một trách nhiệm rõ ràng, không phụ thuộc chéo ngo�
 
 ## Lịch chạy & vận hành
 
-- `node-cron` với biểu thức `*/30 * * * *`, ép `timezone: "UTC"` (server đã ở UTC nên khớp tự nhiên).
-- Chạy nền bằng **pm2** qua `ecosystem.config.js` (app name: `my-favorite-movies-checker`), `pm2 save` + `pm2 startup` để tự khởi động lại khi server reboot hoặc process crash.
-- Chế độ test: `node src/index.js --once` chạy một lần rồi thoát (dùng để test trước khi bật lịch, và test lại sau khi deploy).
+- Lập lịch bằng **crontab** của Linux trên server, biểu thức `*/30 * * * *`. Server đã ở timezone `Etc/UTC` nên không cần chuyển đổi.
+- Mỗi lần cron kích hoạt chạy `node src/index.js` — một tiến trình ngắn, chạy xong tự thoát (exit code 0 khi thành công). Không dùng pm2, không dùng node-cron, không có tiến trình nền thường trực.
+- crontab không kế thừa PATH đầy đủ của shell đăng nhập, nên dòng crontab phải dùng đường dẫn tuyệt đối tới binary `node` (từ nvm, ví dụ `~/.nvm/versions/node/<version>/bin/node`) và set `cwd` bằng `cd <thư mục app> &&` trước khi chạy.
+- Output (stdout/stderr) của mỗi lần chạy được redirect vào file log (`logs/cron.log`, append) vì crontab không giữ lại output ở đâu khác — dùng để debug khi cần.
+- Chế độ test thủ công: `node src/index.js` chạy một lượt rồi thoát — dùng lệnh y hệt lúc dev/test cục bộ và lúc cron gọi, không có mode/flag riêng.
 
 ## Deploy flow (git)
 
-1. Local: `git init` (đã làm), commit theo từng giai đoạn nhỏ khi code xong từng phần (scaffold → movies.js → state.js → telegram.js → checker.js → index.js/cron → ecosystem.config.js → docs).
+1. Local: `git init` (đã làm), commit theo từng giai đoạn nhỏ khi code xong từng phần (scaffold → movies.js → state.js → telegram.js → checker.js → index.js → docs).
 2. Server: tạo repo tại `~/apps/my-favorite-movies-checker` bằng `git init` + `git config receive.denyCurrentBranch updateInstead`, để `git push` cập nhật thẳng working directory, không cần pull tay.
-3. Local: thêm remote `prod` trỏ tới `ssh://lethethao95@35.211.51.185/home/lethethao95/apps/my-favorite-movies-checker`, `git push prod main`.
-4. Server (qua SSH, chạy tay lần đầu): cài `nvm` + Node LTS, cài `pm2` global, `npm install --production`, tạo `.env` thật, `pm2 start ecosystem.config.js`, `pm2 save`, `pm2 startup`.
-5. Các lần cập nhật sau: `git push prod main` rồi SSH vào chạy `npm install --production && pm2 restart my-favorite-movies-checker`.
+3. Local: thêm remote `prod` trỏ tới `ssh://lethethao95@35.211.51.185/home/lethethao95/apps/my-favorite-movies-checker`, `git push prod master`.
+4. Server (qua SSH, chạy tay lần đầu): cài `nvm` + Node LTS, `npm install --production`, tạo `.env` thật, chạy thử `node src/index.js` một lần để xác nhận, rồi thêm dòng vào crontab (`crontab -e` hoặc `(crontab -l; echo "...") | crontab -`) trỏ tới đường dẫn Node tuyệt đối.
+5. Các lần cập nhật sau: `git push prod master` rồi SSH vào chạy `npm install --production` — không cần đụng vào crontab trừ khi lịch chạy thay đổi.
 
 ## Testing
 
-- Test parser cục bộ (không cần deploy): chạy `node src/index.js --once` trên máy local trước, xác nhận lấy đúng số tập cho cả 9 phim và không crash khi 1 nguồn lỗi giả lập.
-- Sau khi deploy: chạy `--once` trên server để xác nhận state.json được tạo đúng, rồi mới bật pm2 + cron.
-- Test gửi Telegram: tạm sửa state.json giảm 1 số tập của 1 phim để giả lập "có tập mới", chạy `--once`, xác nhận nhận được tin nhắn Telegram, rồi khôi phục state.json.
+- Test parser cục bộ (không cần deploy): chạy `node src/index.js` trên máy local trước, xác nhận lấy đúng số tập cho cả 9 phim và không crash khi 1 nguồn lỗi giả lập.
+- Sau khi deploy: chạy `node src/index.js` thủ công trên server để xác nhận state.json được tạo đúng, rồi mới thêm dòng crontab.
+- Test gửi Telegram: tạm sửa state.json giảm 1 số tập của 1 phim để giả lập "có tập mới", chạy `node src/index.js`, xác nhận nhận được tin nhắn Telegram, rồi khôi phục state.json.
+- Sau khi bật crontab: đợi 1 chu kỳ (tối đa 30 phút) rồi kiểm tra `logs/cron.log` và `state.json` đã được cập nhật đúng giờ.
 
 ## Out of scope / not doing
 
 - Không dùng Puppeteer/headless browser (không cần thiết vì header giả browser đã đủ).
 - Không dùng Google Custom Search API (không cần thiết, fetch trực tiếp hoathinh3d.st đã hoạt động).
 - Không xây cơ chế retry phức tạp — lỗi thì bỏ qua phim đó, chờ lượt chạy kế tiếp (30 phút sau) tự thử lại.
+- Không dùng pm2/node-cron — đã thay bằng crontab của hệ thống theo yêu cầu.
