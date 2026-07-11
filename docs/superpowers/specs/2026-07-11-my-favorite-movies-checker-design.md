@@ -91,9 +91,9 @@ Mỗi module có một trách nhiệm rõ ràng, không phụ thuộc chéo ngo�
 
 1. Local: `git init` (đã làm), commit theo từng giai đoạn nhỏ khi code xong từng phần (scaffold → movies.js → state.js → telegram.js → checker.js → index.js → docs).
 2. Server: tạo repo tại `~/apps/my-favorite-movies-checker` bằng `git init` + `git config receive.denyCurrentBranch updateInstead`, để `git push` cập nhật thẳng working directory, không cần pull tay.
-3. Local: thêm remote `prod` trỏ tới `ssh://lethethao95@35.211.51.185/home/lethethao95/apps/my-favorite-movies-checker`, `git push prod master`.
+3. Local: thêm remote `prod` trỏ tới `ssh://lethethao95@35.211.51.185/home/lethethao95/apps/my-favorite-movies-checker`, rồi push nhánh code thực tế (vd `feature/nodejs-movie-checker`) lên `master` của server bằng refspec: `GIT_SSH_COMMAND='ssh -i "ssh/instance-20260710-170332"' git push prod <nhánh-local>:master` (cần `GIT_SSH_COMMAND` vì `git push` qua `ssh://` không tự nhận key file như lệnh `ssh -i` thông thường).
 4. Server (qua SSH, chạy tay lần đầu): cài `nvm` + Node LTS, `npm install --production`, tạo `.env` thật, chạy thử `node src/index.js` một lần để xác nhận, rồi thêm dòng vào crontab (`crontab -e` hoặc `(crontab -l; echo "...") | crontab -`) trỏ tới đường dẫn Node tuyệt đối.
-5. Các lần cập nhật sau: `git push prod master` rồi SSH vào chạy `npm install --production` — không cần đụng vào crontab trừ khi lịch chạy thay đổi.
+5. Các lần cập nhật sau: push lại như bước 3 rồi SSH vào chạy `npm install --production` — không cần đụng vào crontab trừ khi lịch chạy thay đổi.
 
 ## Testing
 

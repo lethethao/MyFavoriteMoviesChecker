@@ -246,7 +246,7 @@ git commit -m "feat: add episode parsers for hhkungfu.ee and hoathinh3d.st"
 - Produces: `fetchHtml(url: string): Promise<string>`, consumed by `src/checker.js` (Task 8) and mocked in `test/checker.test.js` (Task 8).
 - Consumes: `axios` (from Task 1's dependencies).
 
-No automated test for this task — it is a thin network wrapper; correctness is verified manually via Task 8's checker tests (which mock this module) and the manual `--once` run in Task 10/13. This matches the spec's testing plan (parsing verified against real sites, network wrapper kept trivial).
+No automated test for this task — it is a thin network wrapper; correctness is verified manually via Task 8's checker tests (which mock this module) and the manual `node src/index.js` run in Task 9/13. This matches the spec's testing plan (parsing verified against real sites, network wrapper kept trivial).
 
 - [ ] **Step 1: Write `src/fetcher.js`**
 
@@ -831,11 +831,13 @@ Expected: no output, `git remote -v` now lists `prod`.
 
 - [ ] **Step 2: Push to the server**
 
+The work was developed on `feature/nodejs-movie-checker`, not `master` — push that branch's content to the server's `master` (the branch `receive.denyCurrentBranch=updateInstead` applies to in Task 12) using a refspec. The default `ssh://` git transport does not pick up the `-i` key file the way raw `ssh` commands do, so `GIT_SSH_COMMAND` must specify it explicitly:
+
 Run:
 ```bash
-git push prod master
+GIT_SSH_COMMAND='ssh -i "ssh/instance-20260710-170332" -o StrictHostKeyChecking=accept-new' git push prod feature/nodejs-movie-checker:master
 ```
-Expected: push succeeds; on the server, `~/apps/my-favorite-movies-checker` now contains `src/`, `package.json`, `crontab.txt`, `logs/.gitkeep`, `.env.example`, `.gitignore`, `docs/` (working tree updated because of `receive.denyCurrentBranch=updateInstead` from Task 12).
+Expected: `* [new branch] feature/nodejs-movie-checker -> master`; on the server, `~/apps/my-favorite-movies-checker` now contains `src/`, `package.json`, `crontab.txt`, `logs/.gitkeep`, `.env.example`, `.gitignore`, `docs/` (working tree updated because of `receive.denyCurrentBranch=updateInstead` from Task 12).
 
 - [ ] **Step 3: Install dependencies on the server**
 
@@ -892,4 +894,4 @@ No further commit needed — the deployed state is exactly what was pushed; the 
 ## After This Plan
 
 - The old Claude cloud routine (`trig_01GcRZory2ZWAykweUup2m7E`) can be disabled once the server-hosted checker has run successfully for a full day, to avoid duplicate Telegram notifications. Disabling it is a manual follow-up via `RemoteTrigger` (`action: update`, `enabled: false`) or https://claude.ai/code/routines — not part of this plan.
-- Future code changes: edit locally, run `npm test`, commit, `git push prod master`, then re-run Task 13 Step 3 (skip Steps 1, 4, 6 — dependencies may need reinstalling but `.env` and the crontab entry stay as-is) to redeploy.
+- Future code changes: edit locally, run `npm test`, commit, `GIT_SSH_COMMAND='ssh -i "ssh/instance-20260710-170332"' git push prod <your-branch>:master`, then re-run Task 13 Step 3 (skip Steps 1, 4, 6 — dependencies may need reinstalling but `.env` and the crontab entry stay as-is) to redeploy.
